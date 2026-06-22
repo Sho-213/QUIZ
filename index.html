@@ -211,6 +211,18 @@
                             {{ currentQuestion?.text || '問題データを読み込めません' }}
                         </div>
 
+                        <div v-if="isHost && currentQuestion" class="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg text-xs font-bold text-amber-400 flex items-center gap-2">
+                            <span>🔑 ホスト用正解表示：</span>
+                            <span class="bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded text-2xs font-mono font-black">
+                                {{ currentQuestion.answer.replace('C', '') }}
+                            </span>
+                            <span class="underline">{{ currentQuestion['c' + currentQuestion.answer.replace('C','')] }}</span>
+                        </div>
+
+                        <div v-if="myTeamId && gameState.showAnswer && currentQuestion" class="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl text-center font-bold text-emerald-400 animate-pulse">
+                            📢 正解は 「 {{ currentQuestion.answer.replace('C', '') }}. {{ currentQuestion['c' + currentQuestion.answer.replace('C','')] }} 」 でした！
+                        </div>
+
                         <div v-if="!myTeamId && currentQuestion" class="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2">
                             <div v-if="currentQuestion.c1" class="p-3 bg-slate-900 rounded-lg border border-slate-800 text-sm flex gap-2" :class="{'border-emerald-500 bg-emerald-500/10 text-emerald-400 ring-2 ring-emerald-500/30': gameState.showAnswer && currentQuestion.answer === 'C1'}">
                                 <span class="font-bold text-amber-500">1.</span> <span>{{ currentQuestion.c1 }}</span>
@@ -233,7 +245,7 @@
                         </div>
                         
                         <div v-if="gameState.status === 'closed'" class="text-center py-8 text-sm text-rose-400 font-bold bg-slate-900 rounded-xl border border-slate-800">
-                            回答は締め切られました。{{ gameState.showAnswer ? '結果を確認してください！' : '大画面に注目！' }}
+                            回答は締め切られました。{{ gameState.showAnswer ? '上の結果を確認してください！' : '大画面に注目！' }}
                         </div>
                         
                         <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3 py-2">
@@ -267,6 +279,24 @@
 
                             <button v-if="gameState.showAnswer && gameState.currentQIndex < Object.keys(questions).length - 1" @click="changeQuestion(1)" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-lg text-xs">Next ➡️</button>
                             <button v-if="gameState.showAnswer && gameState.currentQIndex >= Object.keys(questions).length - 1" @click="showFinalResults" class="flex-1 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 font-black py-2 rounded-lg text-xs shadow-xl animate-bounce">✨ 最終ランキングを発表する ✨</button>
+                        </div>
+
+                        <div class="space-y-1 bg-slate-900/80 p-2.5 rounded-lg text-xs">
+                            <div class="text-slate-400 font-bold mb-1 flex justify-between">
+                                <span>📊 リアルタイム回答状況 (ホスト専用表示):</span>
+                                <span class="text-2xs text-amber-400">※出題中もリアルタイムに変動します</span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                                <div v-for="team in Object.values(teams)" :key="team.id" class="flex items-center justify-between p-2 bg-slate-800 rounded border border-slate-700/60">
+                                    <span :style="{color: team.color}" class="font-bold truncate max-w-[140px]">{{ team.name }}</span>
+                                    <span v-if="team.submittedChoice" class="bg-blue-500 text-slate-950 font-mono font-black px-2 py-0.5 rounded text-2xs animate-pulse">
+                                        選択肢 {{ team.submittedChoice.replace('C', '') }}
+                                    </span>
+                                    <span v-else class="bg-slate-900 text-rose-400/70 border border-rose-500/20 px-2 py-0.5 rounded font-mono text-2xs font-bold">
+                                        未回答 🛑
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
