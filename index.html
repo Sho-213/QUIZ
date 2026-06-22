@@ -23,7 +23,7 @@
 </head>
 <body class="bg-slate-950 text-white font-sans antialiased min-h-screen flex flex-col justify-center items-center p-4 relative overflow-y-auto">
 
-    <div v-if="currentScreen === 'result'" class="absolute inset-0 pointer-events-none overflow-hidden">
+    <div v-if="currentScreen === 'result' && resultSubScreen === 'final'" class="absolute inset-0 pointer-events-none overflow-hidden">
         <div v-for="n in 30" :key="n" class="confetti" 
              :style="{
                 left: Math.random() * 100 + '%',
@@ -69,13 +69,26 @@
 
         <div v-if="currentScreen === 'quiz-preset'" class="space-y-6 max-w-2xl mx-auto">
             <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                <h2 class="text-xl font-bold text-emerald-400">📝 クイズ作成・読み込み (3択・4択両対応)</h2>
+                <h2 class="text-xl font-bold text-emerald-400">📝 クイズ作成・部屋設定</h2>
                 <button @click="currentScreen = 'init'" class="text-sm text-slate-400 hover:text-white">戻る</button>
             </div>
 
             <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700 space-y-3">
+                <div class="flex items-center justify-between">
+                    <label class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                        🏢 拠点（グループ）選択機能を有効にする
+                    </label>
+                    <input type="checkbox" v-model="useHubConfig" class="w-5 h-5 accent-emerald-500">
+                </div>
+                <div v-if="useHubConfig" class="space-y-1">
+                    <span class="text-2xs text-slate-400 block">選択肢にする拠点を1行ずつ入力してください：</span>
+                    <textarea v-model="hubOptionsInput" rows="3" placeholder="東京本社&#10;大阪支社&#10;名古屋営業所" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-400 font-sans text-slate-300"></textarea>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700 space-y-3">
                 <label class="text-xs font-bold text-slate-400 block">📋 クイズテキストの貼り付け</label>
-                <textarea v-model="quizCodeInput" rows="5" placeholder="No.1&#10;Q.信号の「進め」の色は？&#10;C1.赤&#10;C2.黄色&#10;C3.青&#10;A.青&#10;P.10" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-400 font-mono text-slate-300"></textarea>
+                <textarea v-model="quizCodeInput" rows="4" placeholder="No.1&#10;Q.信号の「進め」の色は？&#10;C1.赤&#10;C2.黄色&#10;C3.青&#10;A.青&#10;P.10" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-400 font-mono text-slate-300"></textarea>
                 <button @click="importQuizText" class="w-full bg-slate-700 hover:bg-slate-600 text-emerald-400 font-bold py-2 rounded-lg text-sm border border-slate-600">テキストからクイズを読み込む</button>
             </div>
 
@@ -110,7 +123,7 @@
                         🔗 クイズテキストをコピーする
                     </button>
                 </div>
-                <div class="max-h-40 overflow-y-auto space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs">
+                <div class="max-h-32 overflow-y-auto space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs">
                     <div v-for="(q, idx) in quizQuestions" :key="idx" class="bg-slate-900 p-2 rounded border border-slate-800 flex justify-between items-start">
                         <div>
                             <span class="font-mono text-amber-400 font-bold mr-2">No.{{ idx + 1 }}</span>
@@ -122,18 +135,30 @@
                 </div>
             </div>
 
-            <button @click="createRoom" :disabled="quizQuestions.length === 0" class="w-full bg-emerald-500 text-slate-950 font-bold py-3 rounded-xl text-center disabled:opacity-50">
+            <button @click="createRoom" :disabled="quizQuestions.length === 0 || (useHubConfig && !hubOptionsInput.trim())" class="w-full bg-emerald-500 text-slate-950 font-bold py-3 rounded-xl text-center disabled:opacity-50">
                 部屋を作成して待機画面へ ➡️
             </button>
         </div>
 
         <div v-if="currentScreen === 'leader-input-name'" class="space-y-4 text-center max-w-2xl mx-auto">
             <h2 class="text-xl font-bold text-blue-400">📱 チームエントリー</h2>
-            <p class="text-slate-400 text-sm">あなたのチーム名を入力して参加してください</p>
-            <div class="bg-slate-800 p-4 rounded-xl max-w-sm mx-auto space-y-3">
-                <input v-model="newTeamName" @keyup.enter="leaderRegisterTeam" type="text" placeholder="例：チームA" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-center text-sm font-bold focus:outline-none focus:border-blue-400">
-                <button @click="leaderRegisterTeam" :disabled="!newTeamName.trim()" class="w-full bg-blue-500 text-slate-950 font-bold py-2 rounded-lg text-sm disabled:opacity-50">
-                    この名前で参戦する 🚀
+            <p class="text-slate-400 text-sm">チーム名を入力し、所属を選択して参加してください</p>
+            <div class="bg-slate-800 p-5 rounded-xl max-w-sm mx-auto space-y-4 text-left">
+                <div>
+                    <label class="text-xs text-slate-400 font-bold block mb-1">チーム名</label>
+                    <input v-model="newTeamName" type="text" placeholder="例：チームA" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold text-center focus:outline-none focus:border-blue-400">
+                </div>
+
+                <div v-if="roomHubs && roomHubs.length > 0">
+                    <label class="text-xs text-slate-400 font-bold block mb-1">所属拠点を選択</label>
+                    <select v-model="selectedHub" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-bold focus:outline-none text-amber-300">
+                        <option value="">-- 拠点を選択してください --</option>
+                        <option v-for="hub in roomHubs" :key="hub" :value="hub">{{ hub }}</option>
+                    </select>
+                </div>
+
+                <button @click="leaderRegisterTeam" :disabled="!newTeamName.trim() || ((roomHubs && roomHubs.length > 0) && !selectedHub)" class="w-full bg-blue-500 text-slate-950 font-bold py-2.5 rounded-lg text-sm disabled:opacity-50 mt-2">
+                    この内容で参戦する 🚀
                 </button>
             </div>
         </div>
@@ -150,7 +175,10 @@
                 </div>
                 <div class="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto p-1">
                     <div v-for="team in Object.values(teams)" :key="team.id" class="p-3 bg-slate-800 rounded-xl font-bold border-l-4 shadow flex items-center justify-between" :style="{'border-color': team.color}">
-                        <span :style="{color: team.color}">{{ team.name }}</span>
+                        <div class="text-left">
+                            <span :style="{color: team.color}" class="block">{{ team.name }}</span>
+                            <span v-if="team.hub" class="text-3xs text-slate-400 block font-normal">🏢 {{ team.hub }}</span>
+                        </div>
                         <span class="text-2xs bg-slate-900/50 px-2 py-0.5 rounded text-slate-400">READY 👍</span>
                     </div>
                 </div>
@@ -285,11 +313,13 @@
                         <div class="space-y-1 bg-slate-900/80 p-2.5 rounded-lg text-xs">
                             <div class="text-slate-400 font-bold mb-1 flex justify-between">
                                 <span>📊 リアルタイム回答状況 (ホスト専用表示):</span>
-                                <span class="text-2xs text-amber-400">※出題中もリアルタイムに変動します</span>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-1.5">
                                 <div v-for="team in Object.values(teams)" :key="team.id" class="flex items-center justify-between p-2 bg-slate-800 rounded border border-slate-700/60">
-                                    <span :style="{color: team.color}" class="font-bold truncate max-w-[140px]">{{ team.name }}</span>
+                                    <div class="truncate max-w-[140px]">
+                                        <span :style="{color: team.color}" class="font-bold block truncate">{{ team.name }}</span>
+                                        <span v-if="team.hub" class="text-3xs text-slate-500 font-normal">🏢 {{ team.hub }}</span>
+                                    </div>
                                     <span v-if="team.submittedChoice" class="bg-blue-500 text-slate-950 font-mono font-black px-2 py-0.5 rounded text-2xs animate-pulse">
                                         選択肢 {{ team.submittedChoice.replace('C', '') }}
                                     </span>
@@ -312,6 +342,7 @@
                             </div>
                             <div class="flex-1 min-w-0 pr-1">
                                 <div class="font-bold text-xs truncate" :style="{ color: team.color }">{{ team.name }}</div>
+                                <div v-if="team.hub" class="text-3xs text-slate-400 font-normal">🏢 {{ team.hub }}</div>
                                 <div v-if="team.streak && team.streak >= 1" class="inline-flex items-center text-3xs bg-rose-500/20 text-rose-400 px-1.5 py-0.2 rounded font-black mt-0.5 animate-pulse">
                                     🔥 {{ team.streak }}連続正解中
                                 </div>
@@ -325,34 +356,69 @@
         </div>
 
         <div v-if="currentScreen === 'result'" class="space-y-8 text-center py-6 max-w-2xl mx-auto">
-            <div class="space-y-2">
-                <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-rose-400 to-purple-500 tracking-widest animate-pulse">👑 FINAL RANKING</h1>
-                <p class="text-slate-400 text-sm">すべての問題が終了しました！最終結果の発表です！</p>
-            </div>
+            
+            <div v-if="resultSubScreen === 'hub'" class="space-y-6">
+                <div class="space-y-2">
+                    <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 tracking-widest animate-pulse">🏢 HUB RANKING</h1>
+                    <p class="text-slate-400 text-sm">まずは「拠点ごとの平均点ランキング」の発表です！</p>
+                </div>
 
-            <div class="space-y-3 max-w-md mx-auto">
-                <div v-for="(team, index) in sortedTeams.slice(0, 3)" :key="team.id" class="p-4 rounded-2xl border flex items-center shadow-2xl transition-all" :class="{'bg-gradient-to-r from-amber-500/20 to-amber-600/10 border-amber-500 ring-2 ring-amber-500/30 scale-105 font-black': index === 0, 'bg-slate-800/80 border-slate-400 font-bold scale-102': index === 1, 'bg-slate-800/60 border-amber-700 text-sm': index === 2}">
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-xl mr-4 shadow" :class="{'bg-gradient-to-br from-amber-300 to-amber-500 text-slate-950': index === 0, 'bg-gradient-to-br from-slate-200 to-slate-400 text-slate-950': index === 1, 'bg-gradient-to-br from-amber-600 to-amber-800 text-white': index === 2}">
-                        {{ index === 0 ? '🥇' : (index === 1 ? '🥈' : '🥉') }}
+                <div class="space-y-3 max-w-md mx-auto">
+                    <div v-for="(hub, index) in sortedHubs" :key="hub.name" class="p-4 bg-slate-800 rounded-xl border border-slate-700 flex items-center justify-between shadow-lg">
+                        <div class="flex items-center gap-3">
+                            <span class="font-mono font-bold text-lg text-indigo-400">#{{ index + 1 }}</span>
+                            <span class="font-bold text-base text-slate-200">{{ hub.name }}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xl font-mono font-bold text-amber-300">{{ hub.avg }} <span class="text-xs text-slate-500">点</span></span>
+                            <span class="text-3xs block text-slate-500">(参加: {{ hub.count }}チーム)</span>
+                        </div>
                     </div>
-                    <div class="flex-1 text-left text-lg truncate" :style="{ color: team.color }">
-                        {{ team.name }}
-                        <span v-if="team.id === myTeamId" class="ml-2 text-2xs bg-blue-500 text-slate-950 px-2 py-0.5 rounded-full font-sans">YOUR TEAM</span>
-                    </div>
-                    <div class="text-2xl font-mono text-amber-300">{{ team.score }} <span class="text-xs text-slate-500">P</span></div>
+                </div>
+
+                <div v-if="isHost" class="pt-6">
+                    <button @click="proceedToFinalRanking" class="bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 font-black px-8 py-3 rounded-xl text-sm shadow-xl animate-bounce">
+                        いよいよ最終チームランキングの発表へ ➡️
+                    </button>
+                </div>
+                <div v-else class="text-xs text-slate-500 animate-pulse bg-slate-950 py-2 rounded-lg">
+                    📢 ホストが次の画面に進めるまでそのままお待ちください...
                 </div>
             </div>
 
-            <div v-if="sortedTeams.length > 3" class="max-w-md mx-auto bg-slate-950/50 rounded-xl p-3 border border-slate-800 text-xs text-left space-y-1.5 max-h-40 overflow-y-auto">
-                <div v-for="(team, index) in sortedTeams.slice(3)" :key="team.id" class="flex justify-between items-center p-2 bg-slate-900/60 rounded border border-slate-800">
-                    <span class="text-slate-500 font-bold mr-3">#{{ index + 4 }}</span>
-                    <span class="flex-1 truncate font-medium" :style="{ color: team.color }">{{ team.name }}</span>
-                    <span class="font-mono font-bold text-slate-400">{{ team.score }} P</span>
+            <div v-if="resultSubScreen === 'final'" class="space-y-6">
+                <div class="space-y-2">
+                    <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-rose-400 to-purple-500 tracking-widest animate-pulse">👑 FINAL RANKING</h1>
+                    <p class="text-slate-400 text-sm">すべての結果が出揃いました！最終順位です！</p>
                 </div>
-            </div>
 
-            <div v-if="isHost" class="pt-6 border-t border-slate-800">
-                <button @click="resetToTitle" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-6 py-2.5 rounded-xl text-xs border border-slate-700 transition-all">🔄 クイズを完全に終了してタイトルに戻る</button>
+                <div class="space-y-3 max-w-md mx-auto">
+                    <div v-for="(team, index) in sortedTeams.slice(0, 3)" :key="team.id" class="p-4 rounded-2xl border flex items-center shadow-2xl transition-all" :class="{'bg-gradient-to-r from-amber-500/20 to-amber-600/10 border-amber-500 ring-2 ring-amber-500/30 scale-105 font-black': index === 0, 'bg-slate-800/80 border-slate-400 font-bold scale-102': index === 1, 'bg-slate-800/60 border-amber-700 text-sm': index === 2}">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-xl mr-4 shadow" :class="{'bg-gradient-to-br from-amber-300 to-amber-500 text-slate-950': index === 0, 'bg-gradient-to-br from-slate-200 to-slate-400 text-slate-950': index === 1, 'bg-gradient-to-br from-amber-600 to-amber-800 text-white': index === 2}">
+                            {{ index === 0 ? '🥇' : (index === 1 ? '🥈' : '🥉') }}
+                        </div>
+                        <div class="flex-1 text-left min-w-0 pr-2">
+                            <span class="text-lg block truncate" :style="{ color: team.color }">{{ team.name }}</span>
+                            <span v-if="team.hub" class="text-3xs text-slate-400 font-normal block">🏢 {{ team.hub }}</span>
+                        </div>
+                        <div class="text-2xl font-mono text-amber-300 whitespace-nowrap">{{ team.score }} <span class="text-xs text-slate-500">P</span></div>
+                    </div>
+                </div>
+
+                <div v-if="sortedTeams.length > 3" class="max-w-md mx-auto bg-slate-950/50 rounded-xl p-3 border border-slate-800 text-xs text-left space-y-1.5 max-h-40 overflow-y-auto">
+                    <div v-for="(team, index) in sortedTeams.slice(3)" :key="team.id" class="flex justify-between items-center p-2 bg-slate-900/60 rounded border border-slate-800">
+                        <span class="text-slate-500 font-bold mr-3">#{{ index + 4 }}</span>
+                        <div class="flex-1 truncate">
+                            <span class="font-medium" :style="{ color: team.color }">{{ team.name }}</span>
+                            <span v-if="team.hub" class="text-3xs text-slate-500 ml-2">({{ team.hub }})</span>
+                        </div>
+                        <span class="font-mono font-bold text-slate-400 whitespace-nowrap">{{ team.score }} P</span>
+                    </div>
+                </div>
+
+                <div v-if="isHost" class="pt-6 border-t border-slate-800">
+                    <button @click="resetToTitle" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-6 py-2.5 rounded-xl text-xs border border-slate-700 transition-all">🔄 クイズを完全に終了してタイトルに戻る</button>
+                </div>
             </div>
         </div>
 
@@ -381,6 +447,15 @@
                 const inputRoomId = vueRef('');
                 const isHost = vueRef(false);
                 const myTeamId = vueRef('');
+
+                // 拠点機能の初期変数
+                const useHubConfig = vueRef(false);
+                const hubOptionsInput = vueRef('');
+                const roomHubs = vueRef([]);
+                const selectedHub = vueRef('');
+
+                // リザルトの中の画面管理 ('hub' or 'final')
+                const resultSubScreen = vueRef('hub');
 
                 const quizQuestions = vueRef([]);
                 const newQ = vueRef({ text: '', c1: '', c2: '', c3: '', c4: '', answer: '', points: 1 });
@@ -466,9 +541,16 @@
                     const generatedId = Math.floor(100000 + Math.random() * 900000).toString();
                     const rQuestions = {}; quizQuestions.value.forEach((q, i) => { rQuestions['q_'+i] = q; });
                     
+                    // 拠点情報のパース
+                    let hubsData = [];
+                    if (useHubConfig.value && hubOptionsInput.value.trim()) {
+                        hubsData = hubOptionsInput.value.split('\n').map(h => h.trim()).filter(h => h);
+                    }
+
                     await set(ref(db, `quizRooms/${generatedId}`), {
                         questions: rQuestions,
-                        state: { currentQIndex: 0, status: 'lobby', showAnswer: false, timer: 10 },
+                        hubs: hubsData,
+                        state: { currentQIndex: 0, status: 'lobby', showAnswer: false, timer: 10, subScreen: 'hub' },
                         teams: {}
                     });
                     roomId.value = generatedId; isHost.value = true;
@@ -480,6 +562,11 @@
                     const snap = await get(ref(db, `quizRooms/${inputRoomId.value}`));
                     if (!snap.exists()) { alert('部屋が見つかりません'); return; }
                     roomId.value = inputRoomId.value;
+                    
+                    // 拠点を同期読み込み
+                    const roomData = snap.val();
+                    if(roomData.hubs) roomHubs.value = roomData.hubs;
+
                     if (selectedRole.value === 'leader') currentScreen.value = 'leader-input-name';
                     else currentScreen.value = 'lobby';
                     startSync(inputRoomId.value);
@@ -492,7 +579,13 @@
                     const chosenColor = COLORS[currentTeamCount % COLORS.length];
 
                     const teamData = {
-                        id: tid, name: newTeamName.value.trim(), score: 0, submittedChoice: '', color: chosenColor, streak: 0
+                        id: tid, 
+                        name: newTeamName.value.trim(), 
+                        score: 0, 
+                        submittedChoice: '', 
+                        color: chosenColor, 
+                        streak: 0,
+                        hub: selectedHub.value || '' // 拠点データ追加
                     };
                     await set(ref(db, `quizRooms/${roomId.value}/teams/${tid}`), teamData);
                     myTeamId.value = tid;
@@ -507,9 +600,12 @@
                 const startSync = (id) => {
                     onValue(ref(db, `quizRooms/${id}/teams`), (snap) => { teams.value = snap.val() || {}; });
                     onValue(ref(db, `quizRooms/${id}/questions`), (snap) => { if(snap.val()) questions.value = snap.val(); });
+                    onValue(ref(db, `quizRooms/${id}/hubs`), (snap) => { if(snap.val()) roomHubs.value = snap.val(); });
                     onValue(ref(db, `quizRooms/${id}/state`), (snap) => { 
                         if(snap.val()) {
                             gameState.value = snap.val();
+                            resultSubScreen.value = gameState.value.subScreen || 'hub';
+
                             if (gameState.value.status === 'result') {
                                 if(localTimerInterval) { clearInterval(localTimerInterval); localTimerInterval = null; }
                                 currentScreen.value = 'result';
@@ -567,13 +663,21 @@
                         currentQIndex: nextIdx,
                         status: 'waiting',
                         showAnswer: false,
-                        timer: 10
+                        timer: 10,
+                        subScreen: 'hub'
                     });
                 };
 
                 const showFinalResults = async () => {
                     if(localTimerInterval) { clearInterval(localTimerInterval); localTimerInterval = null; }
+                    // 最初に拠点ランキングを出すため、subScreenを'hub'にして結果画面へ
+                    await set(ref(db, `quizRooms/${roomId.value}/state/subScreen`), 'hub');
                     await set(ref(db, `quizRooms/${roomId.value}/state/status`), 'result');
+                };
+
+                const proceedToFinalRanking = async () => {
+                    // ホストが次の個人ランキング画面に進行させる操作
+                    await set(ref(db, `quizRooms/${roomId.value}/state/subScreen`), 'final');
                 };
 
                 const resetToTitle = async () => {
@@ -593,10 +697,40 @@
                     return Object.values(teams.value).sort((a,b) => b.score !== a.score ? b.score - a.score : a.id.localeCompare(b.id));
                 });
 
+                // 【追加】拠点別平均点算出ロジック
+                const sortedHubs = computed(() => {
+                    const hubMap = {};
+                    // まず登録されている拠点一覧で初期化
+                    if (roomHubs.value && roomHubs.value.length > 0) {
+                        roomHubs.value.forEach(h => { hubMap[h] = { total: 0, count: 0 }; });
+                    }
+                    
+                    // 各チームのスコアを集計
+                    Object.values(teams.value).forEach(team => {
+                        const hubName = team.hub || '未設定';
+                        if (!hubMap[hubName]) {
+                            hubMap[hubName] = { total: 0, count: 0 };
+                        }
+                        hubMap[hubName].total += team.score || 0;
+                        hubMap[hubName].count += 1;
+                    });
+
+                    // 配列化して平均点を算出し、降順ソート
+                    const list = Object.keys(hubMap).map(name => {
+                        const count = hubMap[name].count;
+                        const avg = count > 0 ? (hubMap[name].total / count).toFixed(1) : "0.0";
+                        return { name, avg: parseFloat(avg), count };
+                    });
+
+                    // チームが1つ以上所属している拠点を優先してスコア順にソート
+                    return list.sort((a, b) => b.avg - a.avg);
+                });
+
                 return {
                     currentScreen, selectedRole, roomId, inputRoomId, isHost, myTeamId,
-                    quizQuestions, newQ, quizCodeInput, newTeamName, questions, teams, gameState, currentQuestion, sortedTeams,
-                    prepareJoin, addSingleQuestion, importQuizText, exportQuizText, getAnswerText, createRoom, joinRoom, leaderRegisterTeam, startQuizGame, startCountdownTimer, revealAnswerAndAwardPoints, changeQuestion, showFinalResults, resetToTitle, submitAnswer
+                    useHubConfig, hubOptionsInput, roomHubs, selectedHub, resultSubScreen,
+                    quizQuestions, newQ, quizCodeInput, newTeamName, questions, teams, gameState, currentQuestion, sortedTeams, sortedHubs,
+                    prepareJoin, addSingleQuestion, importQuizText, exportQuizText, getAnswerText, createRoom, joinRoom, leaderRegisterTeam, startQuizGame, startCountdownTimer, revealAnswerAndAwardPoints, changeQuestion, showFinalResults, proceedToFinalRanking, resetToTitle, submitAnswer
                 };
             }
         }).mount('#app');
