@@ -15,12 +15,13 @@
             100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
         }
         .confetti {
-            position: absolute; width: 10px; height: 10px;
+            position: fixed; width: 10px; height: 10px;
             animation: celebrate 4s linear infinite;
+            z-index: 0; pointer-events: none;
         }
     </style>
 </head>
-<body class="bg-slate-950 text-white font-sans antialiased min-h-screen flex flex-col justify-center items-center p-4 relative overflow-hidden">
+<body class="bg-slate-950 text-white font-sans antialiased min-h-screen flex flex-col justify-center items-center p-4 relative overflow-y-auto">
 
     <div v-if="currentScreen === 'result'" class="absolute inset-0 pointer-events-none overflow-hidden">
         <div v-for="n in 30" :key="n" class="confetti" 
@@ -34,7 +35,7 @@
         </div>
     </div>
 
-    <div id="app" class="w-full max-w-5xl bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-2xl relative z-10">
+    <div id="app" class="w-full max-w-5xl bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-2xl relative z-10 my-4">
         
         <div v-if="currentScreen === 'init'" class="space-y-6 text-center py-4 max-w-2xl mx-auto">
             <h1 class="text-4xl font-extrabold text-amber-400 tracking-wider">🏆 QUIZ SYSTEM v3</h1>
