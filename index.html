@@ -197,7 +197,7 @@
                 
                 <div class="lg:col-span-2 space-y-6">
                     
-                    <div v-if="!myTeamId" class="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-4">
+                    <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-4">
                         <div class="flex justify-between items-center border-b border-slate-900 pb-2">
                             <div class="flex items-center gap-2">
                                 <span class="text-xs font-bold text-amber-400 tracking-wider">QUESTION</span>
@@ -210,7 +210,8 @@
                         <div class="text-xl font-bold py-4 text-center text-slate-100">
                             {{ currentQuestion?.text || '問題データを読み込めません' }}
                         </div>
-                        <div v-if="currentQuestion" class="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2">
+
+                        <div v-if="!myTeamId && currentQuestion" class="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2">
                             <div v-if="currentQuestion.c1" class="p-3 bg-slate-900 rounded-lg border border-slate-800 text-sm flex gap-2" :class="{'border-emerald-500 bg-emerald-500/10 text-emerald-400 ring-2 ring-emerald-500/30': gameState.showAnswer && currentQuestion.answer === 'C1'}">
                                 <span class="font-bold text-amber-500">1.</span> <span>{{ currentQuestion.c1 }}</span>
                             </div>
@@ -228,31 +229,31 @@
 
                     <div v-if="myTeamId" class="bg-blue-950/20 border border-blue-500/20 p-5 rounded-xl space-y-4">
                         <div class="flex justify-between items-center border-b border-blue-900/40 pb-2">
-                            <span class="text-xs font-bold text-blue-400 tracking-wider">📱 あなたの手元回答コントローラー</span>
-                            <span class="font-mono text-xs bg-slate-900 px-2 py-0.5 rounded text-slate-400">Q.{{ gameState.currentQIndex + 1 }}</span>
+                            <span class="text-xs font-bold text-blue-400 tracking-wider">📱 タップして回答を選択・送信</span>
                         </div>
                         
                         <div v-if="gameState.status === 'closed'" class="text-center py-8 text-sm text-rose-400 font-bold bg-slate-900 rounded-xl border border-slate-800">
-                            回答は締め切られました。{{ gameState.showAnswer ? '結果を確認してください！' : '大画面に注目してください！' }}
+                            回答は締め切られました。{{ gameState.showAnswer ? '結果を確認してください！' : '大画面に注目！' }}
                         </div>
                         
-                        <div v-else class="grid grid-cols-2 gap-4 py-2">
-                            <button v-if="currentQuestion?.c1" @click="submitAnswer('C1')" class="p-6 text-2xl font-black rounded-2xl border transition-all active:scale-95 flex flex-col items-center justify-center gap-1" :class="teams[myTeamId]?.submittedChoice === 'C1' ? 'bg-blue-500 border-blue-400 text-slate-950 shadow-xl ring-4 ring-blue-500/30' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'">
-                                <span class="text-sm opacity-60">選択肢</span>1
+                        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3 py-2">
+                            <button v-if="currentQuestion?.c1" @click="submitAnswer('C1')" class="p-5 text-lg font-bold rounded-xl border transition-all active:scale-95 text-left flex items-center gap-3" :class="teams[myTeamId]?.submittedChoice === 'C1' ? 'bg-blue-500 border-blue-400 text-slate-950 shadow-xl ring-4 ring-blue-500/30' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'">
+                                <span class="w-6 h-6 rounded-full bg-slate-900/40 text-xs flex items-center justify-center font-black">1</span>
+                                <span class="truncate">{{ currentQuestion.c1 }}</span>
                             </button>
-                            <button v-if="currentQuestion?.c2" @click="submitAnswer('C2')" class="p-6 text-2xl font-black rounded-2xl border transition-all active:scale-95 flex flex-col items-center justify-center gap-1" :class="teams[myTeamId]?.submittedChoice === 'C2' ? 'bg-blue-500 border-blue-400 text-slate-950 shadow-xl ring-4 ring-blue-500/30' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'">
-                                <span class="text-sm opacity-60">選択肢</span>2
+                            <button v-if="currentQuestion?.c2" @click="submitAnswer('C2')" class="p-5 text-lg font-bold rounded-xl border transition-all active:scale-95 text-left flex items-center gap-3" :class="teams[myTeamId]?.submittedChoice === 'C2' ? 'bg-blue-500 border-blue-400 text-slate-950 shadow-xl ring-4 ring-blue-500/30' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'">
+                                <span class="w-6 h-6 rounded-full bg-slate-900/40 text-xs flex items-center justify-center font-black">2</span>
+                                <span class="truncate">{{ currentQuestion.c2 }}</span>
                             </button>
-                            <button v-if="currentQuestion?.c3" @click="submitAnswer('C3')" class="p-6 text-2xl font-black rounded-2xl border transition-all active:scale-95 flex flex-col items-center justify-center gap-1" :class="teams[myTeamId]?.submittedChoice === 'C3' ? 'bg-blue-500 border-blue-400 text-slate-950 shadow-xl ring-4 ring-blue-500/30' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'">
-                                <span class="text-sm opacity-60">選択肢</span>3
+                            <button v-if="currentQuestion?.c3" @click="submitAnswer('C3')" class="p-5 text-lg font-bold rounded-xl border transition-all active:scale-95 text-left flex items-center gap-3" :class="teams[myTeamId]?.submittedChoice === 'C3' ? 'bg-blue-500 border-blue-400 text-slate-950 shadow-xl ring-4 ring-blue-500/30' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'">
+                                <span class="w-6 h-6 rounded-full bg-slate-900/40 text-xs flex items-center justify-center font-black">3</span>
+                                <span class="truncate">{{ currentQuestion.c3 }}</span>
                             </button>
-                            <button v-if="currentQuestion?.c4" @click="submitAnswer('C4')" class="p-6 text-2xl font-black rounded-2xl border transition-all active:scale-95 flex flex-col items-center justify-center gap-1" :class="teams[myTeamId]?.submittedChoice === 'C4' ? 'bg-blue-500 border-blue-400 text-slate-950 shadow-xl ring-4 ring-blue-500/30' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'">
-                                <span class="text-sm opacity-60">選択肢</span>4
+                            <button v-if="currentQuestion?.c4" @click="submitAnswer('C4')" class="p-5 text-lg font-bold rounded-xl border transition-all active:scale-95 text-left flex items-center gap-3" :class="teams[myTeamId]?.submittedChoice === 'C4' ? 'bg-blue-500 border-blue-400 text-slate-950 shadow-xl ring-4 ring-blue-500/30' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'">
+                                <span class="w-6 h-6 rounded-full bg-slate-900/40 text-xs flex items-center justify-center font-black">4</span>
+                                <span class="truncate">{{ currentQuestion.c4 }}</span>
                             </button>
                         </div>
-                        <p v-if="gameState.status !== 'closed'" class="text-center text-xs text-slate-400 font-medium">
-                            ※締め切られる前なら、何度でも押し直して変更可能です！
-                        </p>
                     </div>
 
                     <div v-if="isHost" class="bg-emerald-950/20 border border-emerald-500/20 p-4 rounded-xl space-y-3">
@@ -266,16 +267,6 @@
 
                             <button v-if="gameState.showAnswer && gameState.currentQIndex < Object.keys(questions).length - 1" @click="changeQuestion(1)" class="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-lg text-xs">Next ➡️</button>
                             <button v-if="gameState.showAnswer && gameState.currentQIndex >= Object.keys(questions).length - 1" @click="showFinalResults" class="flex-1 bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 font-black py-2 rounded-lg text-xs shadow-xl animate-bounce">✨ 最終ランキングを発表する ✨</button>
-                        </div>
-
-                        <div class="space-y-1 bg-slate-900/60 p-2 rounded-lg text-xs索">
-                            <div class="text-slate-400 font-bold mb-1">各チームの回答状況(管理用):</div>
-                            <div v-for="team in Object.values(teams)" :key="team.id" class="flex items-center justify-between p-1.5 bg-slate-800 rounded">
-                                <span :style="{color: team.color}" class="font-bold truncate max-w-[120px]">{{ team.name }}</span>
-                                <span class="px-2 py-0.5 rounded font-mono text-2xs" :class="team.submittedChoice ? 'bg-blue-500/20 text-blue-300' : 'bg-slate-700 text-slate-400'">
-                                    {{ team.submittedChoice ? '回答済' : '未回答 🛑' }}
-                                </span>
-                            </div>
                         </div>
                     </div>
 
@@ -342,7 +333,7 @@
 
         // ★ Firebaseの設定
         const firebaseConfig = {
-            databaseURL: "https://quiz-4d92d-default-rtdb.asia-southeast1.firebasedatabase.app/"
+            databaseURL: "https://YOUR-PROJECT-ID-default-rtdb.asia-southeast1.firebasedatabase.app"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -561,10 +552,6 @@
                     }
                 };
 
-                const adjustScore = (tid, amt) => {
-                    set(ref(db, `quizRooms/${roomId.value}/teams/${tid}/score`), Math.max(0, teams.value[tid].score + amt));
-                };
-
                 const submitAnswer = (choice) => {
                     if (gameState.value.status === 'closed' || gameState.value.status === 'result') return;
                     set(ref(db, `quizRooms/${roomId.value}/teams/${myTeamId.value}/submittedChoice`), choice);
@@ -578,7 +565,7 @@
                 return {
                     currentScreen, selectedRole, roomId, inputRoomId, isHost, myTeamId,
                     quizQuestions, newQ, quizCodeInput, newTeamName, questions, teams, gameState, currentQuestion, sortedTeams,
-                    prepareJoin, addSingleQuestion, importQuizText, exportQuizText, getAnswerText, createRoom, joinRoom, leaderRegisterTeam, startQuizGame, startCountdownTimer, revealAnswerAndAwardPoints, changeQuestion, showFinalResults, resetToTitle, adjustScore, submitAnswer
+                    prepareJoin, addSingleQuestion, importQuizText, exportQuizText, getAnswerText, createRoom, joinRoom, leaderRegisterTeam, startQuizGame, startCountdownTimer, revealAnswerAndAwardPoints, changeQuestion, showFinalResults, resetToTitle, submitAnswer
                 };
             }
         }).mount('#app');
