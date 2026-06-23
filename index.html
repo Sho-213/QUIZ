@@ -25,7 +25,7 @@
             50% { transform: scale(1.3); opacity: 1; }
             100% { transform: scale(1); opacity: 1; }
         }
-        .animate-pop { animation: pop 0.4s ease-out forwards; }
+        .animate-pop { animation: pop 0.3s ease-out forwards; }
     </style>
 </head>
 <body class="bg-slate-950 text-white font-sans antialiased min-h-screen flex flex-col justify-center items-center p-4 relative overflow-y-auto">
@@ -44,8 +44,8 @@
 
     <div id="app" class="w-full max-w-5xl bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-2xl relative z-10 my-4">
         
-        <div v-if="gameState.status === 'game-start-countdown'" class="absolute inset-0 bg-slate-950/95 rounded-2xl flex flex-col justify-center items-center z-50">
-            <div class="text-xl font-bold text-amber-400 tracking-widest mb-6 uppercase animate-pulse">⚔️ QUIZ BATTLE START ⚔️</div>
+        <div v-if="gameState.status === 'lobby-countdown'" class="absolute inset-0 bg-slate-950/95 rounded-2xl flex flex-col justify-center items-center z-50">
+            <div class="text-xl font-bold text-amber-400 tracking-widest mb-6 uppercase animate-pulse">⚔️ ARE YOU READY? ⚔️</div>
             <div :key="startCountdownValue" class="text-9xl font-black text-amber-500 animate-pop font-mono">
                 {{ startCountdownValue }}
             </div>
@@ -462,13 +462,11 @@
                 const isHost = vueRef(false);
                 const myTeamId = vueRef('');
 
-                // 拠点機能の初期変数
                 const useHubConfig = vueRef(false);
                 const hubOptionsInput = vueRef('');
                 const roomHubs = vueRef([]);
                 const selectedHub = vueRef('');
 
-                // リザルトの中の画面管理 ('hub' or 'final')
                 const resultSubScreen = vueRef('hub');
 
                 const quizQuestions = vueRef([]);
@@ -480,8 +478,8 @@
                 const teams = vueRef({});
                 const gameState = vueRef({ currentQIndex: 0, status: 'lobby', showAnswer: false, timer: 10 });
                 
-                // 【追加】ゲーム開始直前の321同期用変数
-                const startCountdownValue = vueRef(3);
+                // 【修正】3・2・1・GOを表示するための同期用変数
+                const startCountdownValue = vueRef('3');
 
                 let localTimerInterval = null;
 
@@ -566,7 +564,7 @@
                     await set(ref(db, `quizRooms/${generatedId}`), {
                         questions: rQuestions,
                         hubs: hubsData,
-                        state: { currentQIndex: 0, status: 'lobby', showAnswer: false, timer: 10, subScreen: 'hub', startCountdown: 3 },
+                        state: { currentQIndex: 0, status: 'lobby', showAnswer: false, timer: 10, subScreen: 'hub', startCountdown: '3' },
                         teams: {}
                     });
                     roomId.value = generatedId; isHost.value = true;
@@ -607,21 +605,24 @@
                     currentScreen.value = 'lobby';
                 };
 
-                // 【修正】ロビーからスタートしたときに、まずFirebase側を321カウントダウン用のステータスにする
+                // 【修正】ホストが開始を押した際の処理：ロビー画面のまま「3 -> 2 -> 1 -> GO!」とリアルタイムに同期
                 const startQuizGame = async () => {
                     if (Object.keys(teams.value).length === 0) return;
                     
-                    let count = 3;
-                    await set(ref(db, `quizRooms/${roomId.value}/state/startCountdown`), count);
-                    await set(ref(db, `quizRooms/${roomId.value}/state/status`), 'game-start-countdown');
+                    // まずロビーカウントダウンモードにする
+                    await set(ref(db, `quizRooms/${roomId.value}/state/startCountdown`), '3');
+                    await set(ref(db, `quizRooms/${roomId.value}/state/status`), 'lobby-countdown');
+
+                    const steps = ['2', '1', 'GO!'];
+                    let currentStep = 0;
 
                     let startTimer = setInterval(async () => {
-                        count--;
-                        if (count > 0) {
-                            await set(ref(db, `quizRooms/${roomId.value}/state/startCountdown`), count);
+                        if (currentStep < steps.length) {
+                            await set(ref(db, `quizRooms/${roomId.value}/state/startCountdown`), steps[currentStep]);
+                            currentStep++;
                         } else {
                             clearInterval(startTimer);
-                            // カウントダウン終了後、通常の待機状態(waiting)に移行
+                            // GO! の表示が終わったら通常の待機(waiting)になり、ここで初めてクイズ画面(main)へと遷移
                             await set(ref(db, `quizRooms/${roomId.value}/state/status`), 'waiting');
                         }
                     }, 1000);
@@ -635,13 +636,13 @@
                         if(snap.val()) {
                             gameState.value = snap.val();
                             resultSubScreen.value = gameState.value.subScreen || 'hub';
-                            startCountdownValue.value = gameState.value.startCountdown !== undefined ? gameState.value.startCountdown : 3;
+                            startCountdownValue.value = gameState.value.startCountdown || '3';
 
                             if (gameState.value.status === 'result') {
                                 if(localTimerInterval) { clearInterval(localTimerInterval); localTimerInterval = null; }
                                 currentScreen.value = 'result';
-                            } else if (gameState.value.status !== 'lobby' && currentScreen.value === 'lobby') {
-                                // ステータスがゲーム開始カウントダウン等に変わったらメイン画面を起動
+                            } else if (gameState.value.status === 'waiting' && currentScreen.value === 'lobby') {
+                                // カウントダウンが完了して「waiting」になった瞬間に初めてメインクイズ画面へ！
                                 currentScreen.value = 'main';
                             }
                         }
@@ -718,7 +719,7 @@
                 };
 
                 const submitAnswer = (choice) => {
-                    if (gameState.value.status === 'closed' || gameState.value.status === 'result' || gameState.value.status === 'game-start-countdown') return;
+                    if (gameState.value.status === 'closed' || gameState.value.status === 'result' || gameState.value.status === 'lobby-countdown') return;
                     set(ref(db, `quizRooms/${roomId.value}/teams/${myTeamId.value}/submittedChoice`), choice);
                 };
 
