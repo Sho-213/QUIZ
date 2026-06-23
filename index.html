@@ -21,7 +21,7 @@
         }
         /* カウントダウンアニメーション */
         @keyframes countZoom {
-            0 { transform: scale(0.5); opacity: 0; }
+            0% { transform: scale(0.5); opacity: 0; }
             50% { transform: scale(1.2); opacity: 1; }
             100% { transform: scale(1); opacity: 0; }
         }
@@ -355,7 +355,7 @@
                     <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider px-1">🏆 LIVE RANKING</h3>
                     <transition-group name="ranking" tag="div" class="space-y-2">
                         <div v-for="(team, index) in sortedTeams" :key="team.id" class="flex items-center bg-slate-800 p-3 rounded-xl border-l-4 shadow shadow-black/40" :style="{ 'border-color': team.color }">
-                            <div class="w-5 h-5 rounded-full flex items-center justify-center font-black mr-2 text-2xs" :class="{\`bg-amber-400 text-slate-900\`: index === 0, \`bg-slate-300 text-slate-900\`: index === 1, \`bg-amber-600 text-white\`: index === 2, \`bg-slate-700 text-slate-400\`: index > 2}">
+                            <div class="w-5 h-5 rounded-full flex items-center justify-center font-black mr-2 text-2xs" :class="{'bg-amber-400 text-slate-900': index === 0, 'bg-slate-300 text-slate-900': index === 1, 'bg-amber-600 text-white': index === 2, 'bg-slate-700 text-slate-400': index > 2}">
                                 {{ index + 1 }}
                             </div>
                             <div class="flex-1 min-w-0 pr-1">
@@ -558,7 +558,14 @@
 
                 const createRoom = async () => {
                     const generatedId = Math.floor(100000 + Math.random() * 900000).toString();
-                    const rQuestions = {}; quizQuestions.value.forEach((q, i) => { rQuestions['q_'+i] = q; });
+                    
+                    const rQuestions = {}; 
+                    quizQuestions.value.forEach((q, i) => { 
+                        const cleanQ = { ...q };
+                        // Firebaseエラー回避のため空文字列のc4プロパティを除去
+                        if (!cleanQ.c4) delete cleanQ.c4;
+                        rQuestions['q_'+i] = cleanQ; 
+                    });
                     
                     let hubsData = [];
                     if (useHubConfig.value && hubOptionsInput.value.trim()) {
