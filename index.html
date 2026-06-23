@@ -19,6 +19,15 @@
             animation: celebrate 4s linear infinite;
             z-index: 0; pointer-events: none;
         }
+        /* カウントダウンアニメーション */
+        @keyframes countZoom {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+        .count-animate {
+            animation: countZoom 1s ease-in-out infinite;
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-white font-sans antialiased min-h-screen flex flex-col justify-center items-center p-4 relative overflow-y-auto">
@@ -32,6 +41,15 @@
                 animationDelay: Math.random() * 4 + 's',
                 animationDuration: (Math.random() * 2 + 3) + 's'
              }">
+        </div>
+    </div>
+
+    <div v-if="gameState.status === 'countdown'" class="fixed inset-0 bg-slate-950/95 z-50 flex flex-col justify-center items-center backdrop-blur-sm">
+        <div class="text-center space-y-4">
+            <p class="text-amber-400 font-bold tracking-widest text-sm uppercase animate-pulse">GET READY...</p>
+            <div class="text-8xl font-black text-white count-animate font-mono">
+                {{ gameState.startCount === 0 ? 'GO!!' : gameState.startCount }}
+            </div>
         </div>
     </div>
 
@@ -184,7 +202,7 @@
                 </div>
             </div>
             <div v-if="isHost" class="pt-4">
-                <button @click="startQuizGame" :disabled="Object.keys(teams).length === 0" class="w-full bg-emerald-500 text-slate-950 font-black py-4 rounded-xl text-lg shadow-lg disabled:opacity-50">
+                <button @click="startQuizGameCountdown" :disabled="Object.keys(teams).length === 0" class="w-full bg-emerald-500 text-slate-950 font-black py-4 rounded-xl text-lg shadow-lg disabled:opacity-50">
                     クイズを開始する 🚀
                 </button>
             </div>
@@ -359,14 +377,18 @@
             
             <div v-if="resultSubScreen === 'hub'" class="space-y-6">
                 <div class="space-y-2">
-                    <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 tracking-widest animate-pulse">🏢 HUB RANKING</h1>
-                    <p class="text-slate-400 text-sm">まずは「拠点ごとの平均点ランキング」の発表です！</p>
+                    <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 tracking-widest animate-pulse">
+                        {{ isHubViewActive ? '🏢 HUB RANKING' : '📊 AVERAGE SCORE' }}
+                    </h1>
+                    <p class="text-slate-400 text-sm">
+                        {{ isHubViewActive ? 'まずは「拠点ごとの平均点ランキング」の発表です！' : 'まずは全体の「平均点」データの発表です！' }}
+                    </p>
                 </div>
 
                 <div class="space-y-3 max-w-md mx-auto">
                     <div v-for="(hub, index) in sortedHubs" :key="hub.name" class="p-4 bg-slate-800 rounded-xl border border-slate-700 flex items-center justify-between shadow-lg">
                         <div class="flex items-center gap-3">
-                            <span class="font-mono font-bold text-lg text-indigo-400">#{{ index + 1 }}</span>
+                            <span v-if="isHubViewActive" class="font-mono font-bold text-lg text-indigo-400">#{{ index + 1 }}</span>
                             <span class="font-bold text-base text-slate-200">{{ hub.name }}</span>
                         </div>
                         <div class="text-right">
@@ -448,13 +470,11 @@
                 const isHost = vueRef(false);
                 const myTeamId = vueRef('');
 
-                // 拠点機能の初期変数
                 const useHubConfig = vueRef(false);
                 const hubOptionsInput = vueRef('');
                 const roomHubs = vueRef([]);
                 const selectedHub = vueRef('');
 
-                // リザルトの中の画面管理 ('hub' or 'final')
                 const resultSubScreen = vueRef('hub');
 
                 const quizQuestions = vueRef([]);
@@ -464,7 +484,8 @@
 
                 const questions = vueRef({});
                 const teams = vueRef({});
-                const gameState = vueRef({ currentQIndex: 0, status: 'lobby', showAnswer: false, timer: 10 });
+                // startCount を初期構成に追加
+                const gameState = vueRef({ currentQIndex: 0, status: 'lobby', showAnswer: false, timer: 10, subScreen: 'hub', startCount: 3 });
 
                 let localTimerInterval = null;
 
@@ -541,7 +562,6 @@
                     const generatedId = Math.floor(100000 + Math.random() * 900000).toString();
                     const rQuestions = {}; quizQuestions.value.forEach((q, i) => { rQuestions['q_'+i] = q; });
                     
-                    // 拠点情報のパース
                     let hubsData = [];
                     if (useHubConfig.value && hubOptionsInput.value.trim()) {
                         hubsData = hubOptionsInput.value.split('\n').map(h => h.trim()).filter(h => h);
@@ -550,7 +570,7 @@
                     await set(ref(db, `quizRooms/${generatedId}`), {
                         questions: rQuestions,
                         hubs: hubsData,
-                        state: { currentQIndex: 0, status: 'lobby', showAnswer: false, timer: 10, subScreen: 'hub' },
+                        state: { currentQIndex: 0, status: 'lobby', showAnswer: false, timer: 10, subScreen: 'hub', startCount: 3 },
                         teams: {}
                     });
                     roomId.value = generatedId; isHost.value = true;
@@ -563,7 +583,6 @@
                     if (!snap.exists()) { alert('部屋が見つかりません'); return; }
                     roomId.value = inputRoomId.value;
                     
-                    // 拠点を同期読み込み
                     const roomData = snap.val();
                     if(roomData.hubs) roomHubs.value = roomData.hubs;
 
@@ -585,16 +604,31 @@
                         submittedChoice: '', 
                         color: chosenColor, 
                         streak: 0,
-                        hub: selectedHub.value || '' // 拠点データ追加
+                        hub: selectedHub.value || ''
                     };
                     await set(ref(db, `quizRooms/${roomId.value}/teams/${tid}`), teamData);
                     myTeamId.value = tid;
                     currentScreen.value = 'lobby';
                 };
 
-                const startQuizGame = () => {
+                // 【新機能】クイズ開始時の3秒カウントダウン処理
+                const startQuizGameCountdown = async () => {
                     if (Object.keys(teams.value).length === 0) return;
-                    set(ref(db, `quizRooms/${roomId.value}/state/status`), 'waiting');
+                    
+                    let count = 3;
+                    await set(ref(db, `quizRooms/${roomId.value}/state/startCount`), count);
+                    await set(ref(db, `quizRooms/${roomId.value}/state/status`), 'countdown');
+
+                    const countdownInterval = setInterval(async () => {
+                        count--;
+                        if (count < 0) {
+                            clearInterval(countdownInterval);
+                            // カウントダウン終了、クイズ本編（待機状態）へ移行
+                            await set(ref(db, `quizRooms/${roomId.value}/state/status`), 'waiting');
+                        } else {
+                            await set(ref(db, `quizRooms/${roomId.value}/state/startCount`), count);
+                        }
+                    }, 1000);
                 };
 
                 const startSync = (id) => {
@@ -606,10 +640,11 @@
                             gameState.value = snap.val();
                             resultSubScreen.value = gameState.value.subScreen || 'hub';
 
+                            // countdownの時も、ロビー画面等からオーバーレイが表示される
                             if (gameState.value.status === 'result') {
                                 if(localTimerInterval) { clearInterval(localTimerInterval); localTimerInterval = null; }
                                 currentScreen.value = 'result';
-                            } else if (gameState.value.status !== 'lobby' && currentScreen.value === 'lobby') {
+                            } else if (gameState.value.status !== 'lobby' && gameState.value.status !== 'countdown' && currentScreen.value === 'lobby') {
                                 currentScreen.value = 'main';
                             }
                         }
@@ -670,13 +705,11 @@
 
                 const showFinalResults = async () => {
                     if(localTimerInterval) { clearInterval(localTimerInterval); localTimerInterval = null; }
-                    // 最初に拠点ランキングを出すため、subScreenを'hub'にして結果画面へ
                     await set(ref(db, `quizRooms/${roomId.value}/state/subScreen`), 'hub');
                     await set(ref(db, `quizRooms/${roomId.value}/state/status`), 'result');
                 };
 
                 const proceedToFinalRanking = async () => {
-                    // ホストが次の個人ランキング画面に進行させる操作
                     await set(ref(db, `quizRooms/${roomId.value}/state/subScreen`), 'final');
                 };
 
@@ -697,15 +730,14 @@
                     return Object.values(teams.value).sort((a,b) => b.score !== a.score ? b.score - a.score : a.id.localeCompare(b.id));
                 });
 
-                // 【追加】拠点別平均点算出ロジック
+                // 拠点データの集計とソート
                 const sortedHubs = computed(() => {
                     const hubMap = {};
-                    // まず登録されている拠点一覧で初期化
+                    
                     if (roomHubs.value && roomHubs.value.length > 0) {
                         roomHubs.value.forEach(h => { hubMap[h] = { total: 0, count: 0 }; });
                     }
                     
-                    // 各チームのスコアを集計
                     Object.values(teams.value).forEach(team => {
                         const hubName = team.hub || '未設定';
                         if (!hubMap[hubName]) {
@@ -715,22 +747,30 @@
                         hubMap[hubName].count += 1;
                     });
 
-                    // 配列化して平均点を算出し、降順ソート
                     const list = Object.keys(hubMap).map(name => {
                         const count = hubMap[name].count;
                         const avg = count > 0 ? (hubMap[name].total / count).toFixed(1) : "0.0";
                         return { name, avg: parseFloat(avg), count };
                     });
 
-                    // チームが1つ以上所属している拠点を優先してスコア順にソート
                     return list.sort((a, b) => b.avg - a.avg);
+                });
+
+                // 【新機能】拠点表示が本当にランキングとして有効かを判定するロジック
+                const isHubViewActive = computed(() => {
+                    // ホストが拠点を1つも用意していない、または集計された拠点が実質1つ以下の場合は「平均点」表記にする
+                    if (!roomHubs.value || roomHubs.value.length <= 1) return false;
+                    
+                    // 実際に参加チームがいる拠点（カウントが1以上の拠点）が1つ以下しかない場合も「平均点」にする
+                    const activeHubs = sortedHubs.value.filter(h => h.count > 0);
+                    return activeHubs.length > 1;
                 });
 
                 return {
                     currentScreen, selectedRole, roomId, inputRoomId, isHost, myTeamId,
-                    useHubConfig, hubOptionsInput, roomHubs, selectedHub, resultSubScreen,
+                    useHubConfig, hubOptionsInput, roomHubs, selectedHub, resultSubScreen, isHubViewActive,
                     quizQuestions, newQ, quizCodeInput, newTeamName, questions, teams, gameState, currentQuestion, sortedTeams, sortedHubs,
-                    prepareJoin, addSingleQuestion, importQuizText, exportQuizText, getAnswerText, createRoom, joinRoom, leaderRegisterTeam, startQuizGame, startCountdownTimer, revealAnswerAndAwardPoints, changeQuestion, showFinalResults, proceedToFinalRanking, resetToTitle, submitAnswer
+                    prepareJoin, addSingleQuestion, importQuizText, exportQuizText, getAnswerText, createRoom, joinRoom, leaderRegisterTeam, startQuizGameCountdown, startCountdownTimer, revealAnswerAndAwardPoints, changeQuestion, showFinalResults, proceedToFinalRanking, resetToTitle, submitAnswer
                 };
             }
         }).mount('#app');
