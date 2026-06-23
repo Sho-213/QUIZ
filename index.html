@@ -450,7 +450,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getDatabase, ref, onValue, set, get, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-        // ★ Firebaseの設定
         const firebaseConfig = {
             databaseURL: "https://quiz-4d92d-default-rtdb.asia-southeast1.firebasedatabase.app/"
         };
@@ -484,7 +483,6 @@
 
                 const questions = vueRef({});
                 const teams = vueRef({});
-                // startCount を初期構成に追加
                 const gameState = vueRef({ currentQIndex: 0, status: 'lobby', showAnswer: false, timer: 10, subScreen: 'hub', startCount: 3 });
 
                 let localTimerInterval = null;
@@ -611,7 +609,6 @@
                     currentScreen.value = 'lobby';
                 };
 
-                // 【新機能】クイズ開始時の3秒カウントダウン処理
                 const startQuizGameCountdown = async () => {
                     if (Object.keys(teams.value).length === 0) return;
                     
@@ -623,7 +620,6 @@
                         count--;
                         if (count < 0) {
                             clearInterval(countdownInterval);
-                            // カウントダウン終了、クイズ本編（待機状態）へ移行
                             await set(ref(db, `quizRooms/${roomId.value}/state/status`), 'waiting');
                         } else {
                             await set(ref(db, `quizRooms/${roomId.value}/state/startCount`), count);
@@ -640,11 +636,14 @@
                             gameState.value = snap.val();
                             resultSubScreen.value = gameState.value.subScreen || 'hub';
 
-                            // countdownの時も、ロビー画面等からオーバーレイが表示される
                             if (gameState.value.status === 'result') {
                                 if(localTimerInterval) { clearInterval(localTimerInterval); localTimerInterval = null; }
                                 currentScreen.value = 'result';
-                            } else if (gameState.value.status !== 'lobby' && gameState.value.status !== 'countdown' && currentScreen.value === 'lobby') {
+                            } else if (
+                                // 【ここを修正】statusが'waiting','thinking','closed'のいずれかの時もクイズメイン画面に切り替える
+                                (gameState.value.status === 'waiting' || gameState.value.status === 'thinking' || gameState.value.status === 'closed') && 
+                                (currentScreen.value === 'lobby' || currentScreen.value === 'init')
+                            ) {
                                 currentScreen.value = 'main';
                             }
                         }
@@ -730,7 +729,6 @@
                     return Object.values(teams.value).sort((a,b) => b.score !== a.score ? b.score - a.score : a.id.localeCompare(b.id));
                 });
 
-                // 拠点データの集計とソート
                 const sortedHubs = computed(() => {
                     const hubMap = {};
                     
@@ -756,12 +754,8 @@
                     return list.sort((a, b) => b.avg - a.avg);
                 });
 
-                // 【新機能】拠点表示が本当にランキングとして有効かを判定するロジック
                 const isHubViewActive = computed(() => {
-                    // ホストが拠点を1つも用意していない、または集計された拠点が実質1つ以下の場合は「平均点」表記にする
                     if (!roomHubs.value || roomHubs.value.length <= 1) return false;
-                    
-                    // 実際に参加チームがいる拠点（カウントが1以上の拠点）が1つ以下しかない場合も「平均点」にする
                     const activeHubs = sortedHubs.value.filter(h => h.count > 0);
                     return activeHubs.length > 1;
                 });
