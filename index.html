@@ -19,7 +19,6 @@
             animation: celebrate 4s linear infinite;
             z-index: 0; pointer-events: none;
         }
-        /* ポンッと数字が飛び出すアニメーション */
         @keyframes pop {
             0% { transform: scale(0.3); opacity: 0; }
             50% { transform: scale(1.3); opacity: 1; }
@@ -27,7 +26,6 @@
         }
         .animate-pop { animation: pop 0.3s ease-out forwards; }
 
-        /* 正解・不正解の巨大マーク用アニメーション */
         @keyframes mark-pop {
             0% { transform: scale(0); opacity: 0; }
             40% { transform: scale(1.2); opacity: 1; }
@@ -60,7 +58,7 @@
             </div>
         </div>
 
-        <div v-if="myTeamId && gameState.showAnswer && showLocalEffect" class="absolute inset-0 rounded-2xl flex flex-col justify-center items-center z-50 pointer-events-none transition-all duration-300"
+        <div v-if="currentScreen === 'main' && myTeamId && gameState.showAnswer && showLocalEffect" class="absolute inset-0 rounded-2xl flex flex-col justify-center items-center z-50 pointer-events-none transition-all duration-300"
              :class="isMyAnswerCorrect ? 'bg-emerald-950/80 border-4 border-emerald-500' : 'bg-rose-950/80 border-4 border-rose-500'">
             <div :key="gameState.currentQIndex" class="animate-mark flex flex-col items-center">
                 <span v-if="isMyAnswerCorrect" class="text-[14rem] text-emerald-400 drop-shadow-[0_0_35px_rgba(16,185,129,0.6)] leading-none">◯</span>
@@ -244,7 +242,7 @@
 
                     <div v-if="myTeamId && gameState.showAnswer" class="text-lg font-black px-4 py-1 rounded-lg shadow-md">
                         <span v-if="isMyAnswerCorrect" class="bg-emerald-500 text-slate-950 px-3 py-1 rounded-lg animate-bounce inline-block">🎉 正解！(+{{ currentQuestion?.points }}P)</span>
-                        <span v-else class="bg-rose-500 text-white px-3 py-1 rounded-lg animate-shake inline-block">😢 不正解...</span>
+                        <span v-else class="bg-rose-500 text-white px-3 py-1 rounded-lg inline-block">😢 不正解...</span>
                     </div>
 
                     <div class="text-right">
@@ -257,9 +255,7 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                
                 <div class="lg:col-span-2 space-y-6">
-                    
                     <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-4">
                         <div class="flex justify-between items-center border-b border-slate-900 pb-2">
                             <div class="flex items-center gap-2">
@@ -364,7 +360,6 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
 
                 <div class="space-y-3 bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
@@ -376,7 +371,7 @@
                             </div>
                             <div class="flex-1 min-w-0 pr-1">
                                 <div class="font-bold text-xs truncate" :style="{ color: team.color }">{{ team.name }}</div>
-                                v-if="team.hub" class="text-3xs text-slate-400 font-normal">🏢 {{ team.hub }}</div>
+                                <div v-if="team.hub" class="text-3xs text-slate-400 font-normal">🏢 {{ team.hub }}</div>
                                 <div v-if="team.streak && team.streak >= 1" class="inline-flex items-center text-3xs bg-rose-500/20 text-rose-400 px-1.5 py-0.2 rounded font-black mt-0.5 animate-pulse">
                                     🔥 {{ team.streak }}連続正解中
                                 </div>
@@ -385,7 +380,6 @@
                         </div>
                     </transition-group>
                 </div>
-
             </div>
         </div>
 
@@ -431,8 +425,20 @@
                         <div class="text-2xl font-mono text-amber-300 whitespace-nowrap">{{ team.score }} <span class="text-xs text-slate-500">P</span></div>
                     </div>
                 </div>
+
+                <div v-if="sortedTeams.length > 3" class="max-w-md mx-auto bg-slate-950/50 rounded-xl p-3 border border-slate-800 text-xs text-left space-y-1.5 max-h-40 overflow-y-auto">
+                    <div v-for="(team, index) in sortedTeams.slice(3)" :key="team.id" class="flex justify-between items-center p-2 bg-slate-900/60 rounded border border-slate-800">
+                        <span class="text-slate-500 font-bold mr-3">#{{ index + 4 }}</span>
+                        <div class="flex-1 truncate">
+                            <span class="font-medium" :style="{ color: team.color }">{{ team.name }}</span>
+                            <span v-if="team.hub" class="text-3xs text-slate-500 ml-2">({{ team.hub }})</span>
+                        </div>
+                        <span class="font-mono font-bold text-slate-400 whitespace-nowrap">{{ team.score }} P</span>
+                    </div>
+                </div>
+
                 <div v-if="isHost" class="pt-6 border-t border-slate-800">
-                    <button @click="resetToTitle" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-6 py-2.5 rounded-xl text-xs border border-slate-700 transition-all">🔄 タイトルに戻る</button>
+                    <button @click="resetToTitle" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-6 py-2.5 rounded-xl text-xs border border-slate-700 transition-all">🔄 クイズを終了してタイトルに戻る</button>
                 </div>
             </div>
         </div>
@@ -479,8 +485,6 @@
                 const gameState = vueRef({ currentQIndex: 0, status: 'lobby', showAnswer: false, timer: 10 });
                 
                 const startCountdownValue = vueRef('3');
-                
-                // 【追加】正解・不正解のローカル演出用フラグ
                 const showLocalEffect = vueRef(false);
 
                 let localTimerInterval = null;
@@ -631,7 +635,6 @@
                     });
                 };
 
-                // 【追加】答え合わせ（showAnswer）が真になったタイミングを検知してローカルエフェクトを発火
                 watch(() => gameState.value.showAnswer, (newVal) => {
                     if (newVal) {
                         showLocalEffect.value = true;
@@ -639,7 +642,6 @@
                     }
                 });
 
-                // 次の問題へ移る時にエフェクト表示を完全に初期化
                 watch(() => gameState.value.currentQIndex, () => {
                     showLocalEffect.value = false;
                 });
@@ -709,7 +711,6 @@
                     return Object.values(teams.value).sort((a,b) => b.score !== a.score ? b.score - a.score : a.id.localeCompare(b.id));
                 });
 
-                // 【追加】自分の解答が正しいかどうかの算出プロパティ
                 const isMyAnswerCorrect = computed(() => {
                     if (!myTeamId.value || !currentQuestion.value) return false;
                     return teams.value[myTeamId.value]?.submittedChoice === currentQuestion.value.answer;
