@@ -26,6 +26,15 @@
             100% { transform: scale(1); opacity: 1; }
         }
         .animate-pop { animation: pop 0.3s ease-out forwards; }
+
+        /* 正解・不正解の巨大マーク用アニメーション */
+        @keyframes mark-pop {
+            0% { transform: scale(0); opacity: 0; }
+            40% { transform: scale(1.2); opacity: 1; }
+            60% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0; }
+        }
+        .animate-mark { animation: mark-pop 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     </style>
 </head>
 <body class="bg-slate-950 text-white font-sans antialiased min-h-screen flex flex-col justify-center items-center p-4 relative overflow-y-auto">
@@ -48,6 +57,17 @@
             <div class="text-xl font-bold text-amber-400 tracking-widest mb-6 uppercase animate-pulse">⚔️ ARE YOU READY? ⚔️</div>
             <div :key="startCountdownValue" class="text-9xl font-black text-amber-500 animate-pop font-mono">
                 {{ startCountdownValue }}
+            </div>
+        </div>
+
+        <div v-if="myTeamId && gameState.showAnswer && showLocalEffect" class="absolute inset-0 rounded-2xl flex flex-col justify-center items-center z-50 pointer-events-none transition-all duration-300"
+             :class="isMyAnswerCorrect ? 'bg-emerald-950/80 border-4 border-emerald-500' : 'bg-rose-950/80 border-4 border-rose-500'">
+            <div :key="gameState.currentQIndex" class="animate-mark flex flex-col items-center">
+                <span v-if="isMyAnswerCorrect" class="text-[14rem] text-emerald-400 drop-shadow-[0_0_35px_rgba(16,185,129,0.6)] leading-none">◯</span>
+                <span v-else class="text-[14rem] text-rose-500 drop-shadow-[0_0_35px_rgba(239,68,68,0.6)] leading-none">✕</span>
+                <span class="text-2xl font-black tracking-wider mt-2" :class="isMyAnswerCorrect ? 'text-emerald-400' : 'text-rose-400'">
+                    {{ isMyAnswerCorrect ? 'CORRECT!!' : 'WRONG...' }}
+                </span>
             </div>
         </div>
 
@@ -222,9 +242,9 @@
                         ⏱️ TIME UP
                     </div>
 
-                    <div v-if="myTeamId && gameState.showAnswer" class="text-lg font-black px-4 py-1 rounded-lg shadow-md animate-bounce">
-                        <span v-if="teams[myTeamId]?.submittedChoice === currentQuestion?.answer" class="bg-emerald-500 text-slate-950 px-3 py-1 rounded-lg">🎉 正解！(+{{ currentQuestion?.points }}P)</span>
-                        <span v-else class="bg-rose-500 text-white px-3 py-1 rounded-lg">😢 不正解...</span>
+                    <div v-if="myTeamId && gameState.showAnswer" class="text-lg font-black px-4 py-1 rounded-lg shadow-md">
+                        <span v-if="isMyAnswerCorrect" class="bg-emerald-500 text-slate-950 px-3 py-1 rounded-lg animate-bounce inline-block">🎉 正解！(+{{ currentQuestion?.points }}P)</span>
+                        <span v-else class="bg-rose-500 text-white px-3 py-1 rounded-lg animate-shake inline-block">😢 不正解...</span>
                     </div>
 
                     <div class="text-right">
@@ -356,7 +376,7 @@
                             </div>
                             <div class="flex-1 min-w-0 pr-1">
                                 <div class="font-bold text-xs truncate" :style="{ color: team.color }">{{ team.name }}</div>
-                                <div v-if="team.hub" class="text-3xs text-slate-400 font-normal">🏢 {{ team.hub }}</div>
+                                v-if="team.hub" class="text-3xs text-slate-400 font-normal">🏢 {{ team.hub }}</div>
                                 <div v-if="team.streak && team.streak >= 1" class="inline-flex items-center text-3xs bg-rose-500/20 text-rose-400 px-1.5 py-0.2 rounded font-black mt-0.5 animate-pulse">
                                     🔥 {{ team.streak }}連続正解中
                                 </div>
@@ -370,13 +390,11 @@
         </div>
 
         <div v-if="currentScreen === 'result'" class="space-y-8 text-center py-6 max-w-2xl mx-auto">
-            
             <div v-if="resultSubScreen === 'hub'" class="space-y-6">
                 <div class="space-y-2">
                     <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 tracking-widest animate-pulse">🏢 HUB RANKING</h1>
                     <p class="text-slate-400 text-sm">まずは「拠点ごとの平均点ランキング」の発表です！</p>
                 </div>
-
                 <div class="space-y-3 max-w-md mx-auto">
                     <div v-for="(hub, index) in sortedHubs" :key="hub.name" class="p-4 bg-slate-800 rounded-xl border border-slate-700 flex items-center justify-between shadow-lg">
                         <div class="flex items-center gap-3">
@@ -389,14 +407,10 @@
                         </div>
                     </div>
                 </div>
-
                 <div v-if="isHost" class="pt-6">
                     <button @click="proceedToFinalRanking" class="bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-400 hover:to-rose-400 text-slate-950 font-black px-8 py-3 rounded-xl text-sm shadow-xl animate-bounce">
                         いよいよ最終チームランキングの発表へ ➡️
                     </button>
-                </div>
-                <div v-else class="text-xs text-slate-500 animate-pulse bg-slate-950 py-2 rounded-lg">
-                    📢 ホストが次の画面に進めるまでそのままお待ちください...
                 </div>
             </div>
 
@@ -405,7 +419,6 @@
                     <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-rose-400 to-purple-500 tracking-widest animate-pulse">👑 FINAL RANKING</h1>
                     <p class="text-slate-400 text-sm">すべての結果が出揃いました！最終順位です！</p>
                 </div>
-
                 <div class="space-y-3 max-w-md mx-auto">
                     <div v-for="(team, index) in sortedTeams.slice(0, 3)" :key="team.id" class="p-4 rounded-2xl border flex items-center shadow-2xl transition-all" :class="{'bg-gradient-to-r from-amber-500/20 to-amber-600/10 border-amber-500 ring-2 ring-amber-500/30 scale-105 font-black': index === 0, 'bg-slate-800/80 border-slate-400 font-bold scale-102': index === 1, 'bg-slate-800/60 border-amber-700 text-sm': index === 2}">
                         <div class="w-10 h-10 rounded-full flex items-center justify-center text-xl mr-4 shadow" :class="{'bg-gradient-to-br from-amber-300 to-amber-500 text-slate-950': index === 0, 'bg-gradient-to-br from-slate-200 to-slate-400 text-slate-950': index === 1, 'bg-gradient-to-br from-amber-600 to-amber-800 text-white': index === 2}">
@@ -418,20 +431,8 @@
                         <div class="text-2xl font-mono text-amber-300 whitespace-nowrap">{{ team.score }} <span class="text-xs text-slate-500">P</span></div>
                     </div>
                 </div>
-
-                <div v-if="sortedTeams.length > 3" class="max-w-md mx-auto bg-slate-950/50 rounded-xl p-3 border border-slate-800 text-xs text-left space-y-1.5 max-h-40 overflow-y-auto">
-                    <div v-for="(team, index) in sortedTeams.slice(3)" :key="team.id" class="flex justify-between items-center p-2 bg-slate-900/60 rounded border border-slate-800">
-                        <span class="text-slate-500 font-bold mr-3">#{{ index + 4 }}</span>
-                        <div class="flex-1 truncate">
-                            <span class="font-medium" :style="{ color: team.color }">{{ team.name }}</span>
-                            <span v-if="team.hub" class="text-3xs text-slate-500 ml-2">({{ team.hub }})</span>
-                        </div>
-                        <span class="font-mono font-bold text-slate-400 whitespace-nowrap">{{ team.score }} P</span>
-                    </div>
-                </div>
-
                 <div v-if="isHost" class="pt-6 border-t border-slate-800">
-                    <button @click="resetToTitle" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-6 py-2.5 rounded-xl text-xs border border-slate-700 transition-all">🔄 クイズを完全に終了してタイトルに戻る</button>
+                    <button @click="resetToTitle" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-6 py-2.5 rounded-xl text-xs border border-slate-700 transition-all">🔄 タイトルに戻る</button>
                 </div>
             </div>
         </div>
@@ -442,7 +443,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getDatabase, ref, onValue, set, get, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-        // ★ Firebaseの設定
         const firebaseConfig = {
             databaseURL: "https://quiz-4d92d-default-rtdb.asia-southeast1.firebasedatabase.app/"
         };
@@ -450,7 +450,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        const { createApp, ref: vueRef, computed } = Vue;
+        const { createApp, ref: vueRef, computed, watch } = Vue;
         const COLORS = ['#f87171', '#60a5fa', '#34d399', '#fbbf24', '#c084fc', '#38bdf8', '#f472b6', '#cbd5e1'];
 
         createApp({
@@ -478,8 +478,10 @@
                 const teams = vueRef({});
                 const gameState = vueRef({ currentQIndex: 0, status: 'lobby', showAnswer: false, timer: 10 });
                 
-                // 【修正】3・2・1・GOを表示するための同期用変数
                 const startCountdownValue = vueRef('3');
+                
+                // 【追加】正解・不正解のローカル演出用フラグ
+                const showLocalEffect = vueRef(false);
 
                 let localTimerInterval = null;
 
@@ -532,7 +534,7 @@
                             quizQuestions.value = parsed;
                             quizCodeInput.value = '';
                             alert(`${parsed.length}問のクイズを読み込みました！`);
-                        } else { alert('フォーマットを確認してください。'); }
+                        }
                     } catch(e) { alert('解析エラーが発生しました'); }
                 };
 
@@ -555,12 +557,10 @@
                 const createRoom = async () => {
                     const generatedId = Math.floor(100000 + Math.random() * 900000).toString();
                     const rQuestions = {}; quizQuestions.value.forEach((q, i) => { rQuestions['q_'+i] = q; });
-                    
                     let hubsData = [];
                     if (useHubConfig.value && hubOptionsInput.value.trim()) {
                         hubsData = hubOptionsInput.value.split('\n').map(h => h.trim()).filter(h => h);
                     }
-
                     await set(ref(db, `quizRooms/${generatedId}`), {
                         questions: rQuestions,
                         hubs: hubsData,
@@ -576,10 +576,8 @@
                     const snap = await get(ref(db, `quizRooms/${inputRoomId.value}`));
                     if (!snap.exists()) { alert('部屋が見つかりません'); return; }
                     roomId.value = inputRoomId.value;
-                    
                     const roomData = snap.val();
                     if(roomData.hubs) roomHubs.value = roomData.hubs;
-
                     if (selectedRole.value === 'leader') currentScreen.value = 'leader-input-name';
                     else currentScreen.value = 'lobby';
                     startSync(inputRoomId.value);
@@ -588,41 +586,26 @@
                 const leaderRegisterTeam = async () => {
                     if (!newTeamName.value.trim()) return;
                     const tid = 'team_' + Math.random().toString(36).substr(2, 9);
-                    const currentTeamCount = Object.keys(teams.value).length;
-                    const chosenColor = COLORS[currentTeamCount % COLORS.length];
-
-                    const teamData = {
-                        id: tid, 
-                        name: newTeamName.value.trim(), 
-                        score: 0, 
-                        submittedChoice: '', 
-                        color: chosenColor, 
-                        streak: 0,
-                        hub: selectedHub.value || ''
-                    };
+                    const chosenColor = COLORS[Object.keys(teams.value).length % COLORS.length];
+                    const teamData = { id: tid, name: newTeamName.value.trim(), score: 0, submittedChoice: '', color: chosenColor, streak: 0, hub: selectedHub.value || '' };
                     await set(ref(db, `quizRooms/${roomId.value}/teams/${tid}`), teamData);
                     myTeamId.value = tid;
                     currentScreen.value = 'lobby';
                 };
 
-                // 【修正】ホストが開始を押した際の処理：ロビー画面のまま「3 -> 2 -> 1 -> GO!」とリアルタイムに同期
                 const startQuizGame = async () => {
                     if (Object.keys(teams.value).length === 0) return;
-                    
-                    // まずロビーカウントダウンモードにする
                     await set(ref(db, `quizRooms/${roomId.value}/state/startCountdown`), '3');
                     await set(ref(db, `quizRooms/${roomId.value}/state/status`), 'lobby-countdown');
 
                     const steps = ['2', '1', 'GO!'];
                     let currentStep = 0;
-
                     let startTimer = setInterval(async () => {
                         if (currentStep < steps.length) {
                             await set(ref(db, `quizRooms/${roomId.value}/state/startCountdown`), steps[currentStep]);
                             currentStep++;
                         } else {
                             clearInterval(startTimer);
-                            // GO! の表示が終わったら通常の待機(waiting)になり、ここで初めてクイズ画面(main)へと遷移
                             await set(ref(db, `quizRooms/${roomId.value}/state/status`), 'waiting');
                         }
                     }, 1000);
@@ -642,20 +625,30 @@
                                 if(localTimerInterval) { clearInterval(localTimerInterval); localTimerInterval = null; }
                                 currentScreen.value = 'result';
                             } else if (gameState.value.status === 'waiting' && currentScreen.value === 'lobby') {
-                                // カウントダウンが完了して「waiting」になった瞬間に初めてメインクイズ画面へ！
                                 currentScreen.value = 'main';
                             }
                         }
                     });
                 };
 
+                // 【追加】答え合わせ（showAnswer）が真になったタイミングを検知してローカルエフェクトを発火
+                watch(() => gameState.value.showAnswer, (newVal) => {
+                    if (newVal) {
+                        showLocalEffect.value = true;
+                        setTimeout(() => { showLocalEffect.value = false; }, 1500);
+                    }
+                });
+
+                // 次の問題へ移る時にエフェクト表示を完全に初期化
+                watch(() => gameState.value.currentQIndex, () => {
+                    showLocalEffect.value = false;
+                });
+
                 const startCountdownTimer = async () => {
                     let timeLeft = 10;
                     await set(ref(db, `quizRooms/${roomId.value}/state/timer`), timeLeft);
                     await set(ref(db, `quizRooms/${roomId.value}/state/status`), 'thinking');
-
                     if(localTimerInterval) clearInterval(localTimerInterval);
-
                     localTimerInterval = setInterval(async () => {
                         timeLeft--;
                         if (timeLeft <= 0) {
@@ -672,14 +665,11 @@
                 const revealAnswerAndAwardPoints = async () => {
                     const rightAnswer = currentQuestion.value.answer;
                     const pointsToAward = currentQuestion.value.points || 1;
-
                     for (const tid of Object.keys(teams.value)) {
                         const team = teams.value[tid];
                         if (team.submittedChoice === rightAnswer) {
-                            const newScore = team.score + pointsToAward;
-                            const newStreak = (team.streak || 0) + 1;
-                            await set(ref(db, `quizRooms/${roomId.value}/teams/${tid}/score`), newScore);
-                            await set(ref(db, `quizRooms/${roomId.value}/teams/${tid}/streak`), newStreak);
+                            await set(ref(db, `quizRooms/${roomId.value}/teams/${tid}/score`), (team.score + pointsToAward));
+                            await set(ref(db, `quizRooms/${roomId.value}/teams/${tid}/streak`), ((team.streak || 0) + 1));
                         } else {
                             await set(ref(db, `quizRooms/${roomId.value}/teams/${tid}/streak`), 0);
                         }
@@ -692,13 +682,7 @@
                     for (const tid of Object.keys(teams.value)) {
                         await set(ref(db, `quizRooms/${roomId.value}/teams/${tid}/submittedChoice`), '');
                     }
-                    await set(ref(db, `quizRooms/${roomId.value}/state`), {
-                        currentQIndex: nextIdx,
-                        status: 'waiting',
-                        showAnswer: false,
-                        timer: 10,
-                        subScreen: 'hub'
-                    });
+                    await set(ref(db, `quizRooms/${roomId.value}/state`), { currentQIndex: nextIdx, status: 'waiting', showAnswer: false, timer: 10, subScreen: 'hub' });
                 };
 
                 const showFinalResults = async () => {
@@ -707,10 +691,7 @@
                     await set(ref(db, `quizRooms/${roomId.value}/state/status`), 'result');
                 };
 
-                const proceedToFinalRanking = async () => {
-                    await set(ref(db, `quizRooms/${roomId.value}/state/subScreen`), 'final');
-                };
-
+                const proceedToFinalRanking = async () => { await set(ref(db, `quizRooms/${roomId.value}/state/subScreen`), 'final'); };
                 const resetToTitle = async () => {
                     if (confirm('部屋を解散してタイトルに戻ります。よろしいですか？')) {
                         await remove(ref(db, `quizRooms/${roomId.value}`));
@@ -728,27 +709,28 @@
                     return Object.values(teams.value).sort((a,b) => b.score !== a.score ? b.score - a.score : a.id.localeCompare(b.id));
                 });
 
+                // 【追加】自分の解答が正しいかどうかの算出プロパティ
+                const isMyAnswerCorrect = computed(() => {
+                    if (!myTeamId.value || !currentQuestion.value) return false;
+                    return teams.value[myTeamId.value]?.submittedChoice === currentQuestion.value.answer;
+                });
+
                 const sortedHubs = computed(() => {
                     const hubMap = {};
                     if (roomHubs.value && roomHubs.value.length > 0) {
                         roomHubs.value.forEach(h => { hubMap[h] = { total: 0, count: 0 }; });
                     }
-                    
                     Object.values(teams.value).forEach(team => {
                         const hubName = team.hub || '未設定';
-                        if (!hubMap[hubName]) {
-                            hubMap[hubName] = { total: 0, count: 0 };
-                        }
+                        if (!hubMap[hubName]) hubMap[hubName] = { total: 0, count: 0 };
                         hubMap[hubName].total += team.score || 0;
                         hubMap[hubName].count += 1;
                     });
-
                     const list = Object.keys(hubMap).map(name => {
                         const count = hubMap[name].count;
                         const avg = count > 0 ? (hubMap[name].total / count).toFixed(1) : "0.0";
                         return { name, avg: parseFloat(avg), count };
                     });
-
                     return list.sort((a, b) => b.avg - a.avg);
                 });
 
@@ -756,7 +738,7 @@
                     currentScreen, selectedRole, roomId, inputRoomId, isHost, myTeamId,
                     useHubConfig, hubOptionsInput, roomHubs, selectedHub, resultSubScreen,
                     quizQuestions, newQ, quizCodeInput, newTeamName, questions, teams, gameState, currentQuestion, sortedTeams, sortedHubs,
-                    startCountdownValue,
+                    startCountdownValue, showLocalEffect, isMyAnswerCorrect,
                     prepareJoin, addSingleQuestion, importQuizText, exportQuizText, getAnswerText, createRoom, joinRoom, leaderRegisterTeam, startQuizGame, startCountdownTimer, revealAnswerAndAwardPoints, changeQuestion, showFinalResults, proceedToFinalRanking, resetToTitle, submitAnswer
                 };
             }
