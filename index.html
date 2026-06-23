@@ -70,7 +70,7 @@
         </div>
 
         <div v-if="currentScreen === 'init'" class="space-y-6 text-center py-4 max-w-2xl mx-auto">
-            <h1 class="text-4xl font-extrabold text-amber-400 tracking-wider">🏆 QUIZ SYSTEM v3</h1>
+            <h1 class="text-4xl font-extrabold text-amber-400 tracking-wider">🏆 みんなでクイズ！</h1>
             <p class="text-slate-400 text-sm">役割を選択してクイズに参加してください</p>
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
@@ -450,7 +450,7 @@
         import { getDatabase, ref, onValue, set, get, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
         const firebaseConfig = {
-            databaseURL: "https://quiz-4d92d-default-rtdb.asia-southeast1.firebasedatabase.app/"
+            databaseURL: "https://YOUR-PROJECT-ID-default-rtdb.asia-southeast1.firebasedatabase.app"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -487,7 +487,6 @@
                 const startCountdownValue = vueRef('3');
                 const showLocalEffect = vueRef(false);
 
-                // 【追加】◯✕エフェクト中にランキング表示順位を固定するためのフラグ
                 const isLockRanking = vueRef(false);
 
                 let localTimerInterval = null;
@@ -673,19 +672,15 @@
                     isLockRanking.value = false;
                 };
 
-                // 【修正】showAnswerのフラグが立った時の演出タイミング処理
                 watch(() => gameState.value.showAnswer, (newVal) => {
                     if (newVal) {
                         showLocalEffect.value = true;
-                        
-                        // 回答者が2人以上いる場合、◯✕エフェクト表示中（1.5秒間）はランキングの並び順をロック
                         if (Object.keys(teams.value).length > 1) {
                             isLockRanking.value = true;
                         }
-
                         setTimeout(() => { 
                             showLocalEffect.value = false; 
-                            isLockRanking.value = false; // エフェクトが消えた段階でロック解除 → ランキングが動く演出に
+                            isLockRanking.value = false; 
                         }, 1500);
                     }
                 });
@@ -760,23 +755,17 @@
 
                 const currentQuestion = computed(() => questions.value['q_' + gameState.value.currentQIndex]);
 
-                // 【修正】ロック状態によって算出順位の基準を変更する
                 const sortedTeams = computed(() => {
                     const teamList = Object.values(teams.value);
-                    
-                    // 順位ロック中の場合：加算される前の点数（score - 獲得点数）をシミュレートして並び順を固定
                     if (isLockRanking.value && currentQuestion.value) {
                         const rightAnswer = currentQuestion.value.answer;
                         const pts = currentQuestion.value.points || 1;
-                        
                         return teamList.sort((a, b) => {
                             const scoreA = a.submittedChoice === rightAnswer ? (a.score - pts) : a.score;
                             const scoreB = b.submittedChoice === rightAnswer ? (b.score - pts) : b.score;
                             return scoreB !== scoreA ? scoreB - scoreA : a.id.localeCompare(b.id);
                         });
                     }
-                    
-                    // 通常時：現在の点数でソート
                     return teamList.sort((a,b) => b.score !== a.score ? b.score - a.score : a.id.localeCompare(b.id));
                 });
 
