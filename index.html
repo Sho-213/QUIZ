@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>みんなでクイズ！</title>
+    <title>可変リアルタイム・クイズバトル</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
@@ -363,8 +363,18 @@
                 </div>
 
                 <div class="space-y-3 bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
-                    <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider px-1">🏆 LIVE RANKING</h3>
-                    <transition-group name="ranking" tag="div" class="space-y-2">
+                    <div class="flex justify-between items-center px-1">
+                        <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider">🏆 LIVE RANKING</h3>
+                        <span v-if="isBlindRanking && !isHost" class="text-2xs bg-rose-500/20 text-rose-400 font-bold px-1.5 py-0.5 rounded animate-pulse">🔒 終盤につき非表示中</span>
+                    </div>
+
+                    <div v-if="isBlindRanking && !isHost" class="p-8 text-center bg-slate-900/60 rounded-xl border border-dashed border-slate-800 text-slate-500 text-xs font-bold space-y-2">
+                        <div class="text-2xl">🤫</div>
+                        <div>ここからは順位シークレット！</div>
+                        <div class="text-3xs text-slate-600 font-normal">結果は最後の表彰式までお楽しみに...</div>
+                    </div>
+
+                    <transition-group v-else name="ranking" tag="div" class="space-y-2">
                         <div v-for="(team, index) in sortedTeams" :key="team.id" class="flex items-center bg-slate-800 p-3 rounded-xl border-l-4 shadow shadow-black/40" :style="{ 'border-color': team.color }">
                             <div class="w-5 h-5 rounded-full flex items-center justify-center font-black mr-2 text-2xs" :class="{'bg-amber-400 text-slate-900': index === 0, 'bg-slate-300 text-slate-900': index === 1, 'bg-amber-600 text-white': index === 2, 'bg-slate-700 text-slate-400': index > 2}">
                                 {{ index + 1 }}
@@ -450,7 +460,7 @@
         import { getDatabase, ref, onValue, set, get, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
         const firebaseConfig = {
-            databaseURL: "https://quiz-4d92d-default-rtdb.asia-southeast1.firebasedatabase.app/"
+            databaseURL: "https://YOUR-PROJECT-ID-default-rtdb.asia-southeast1.firebasedatabase.app"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -793,11 +803,21 @@
                     return list.sort((a, b) => b.avg - a.avg);
                 });
 
+                // ★追加：10問以上かつ、残り3問以下になったら参加者画面のランキングを隠す判定
+                const isBlindRanking = computed(() => {
+                    const totalQ = Object.keys(questions.value).length;
+                    if (totalQ < 10) return false; // 10問未満なら隠さない
+                    
+                    // 現在のインデックス(0から開始) + 3 が総問題数以上 = 残り3問以下
+                    // 例: 10問(index 0~9)の場合、index 7 (8問目) になると 7 + 3 >= 10 で真（残り3問）
+                    return (gameState.value.currentQIndex + 3) >= totalQ;
+                });
+
                 return {
                     currentScreen, selectedRole, roomId, inputRoomId, isHost, myTeamId,
                     useHubConfig, hubOptionsInput, roomHubs, selectedHub, resultSubScreen,
                     quizQuestions, newQ, quizCodeInput, newTeamName, questions, teams, gameState, currentQuestion, sortedTeams, sortedHubs,
-                    startCountdownValue, showLocalEffect, isMyAnswerCorrect, isLockRanking,
+                    startCountdownValue, showLocalEffect, isMyAnswerCorrect, isLockRanking, isBlindRanking,
                     prepareJoin, addSingleQuestion, importQuizText, exportQuizText, getAnswerText, createRoom, joinRoom, leaderRegisterTeam, startQuizGame, startCountdownTimer, revealAnswerAndAwardPoints, changeQuestion, showFinalResults, proceedToFinalRanking, resetToTitle, submitAnswer
                 };
             }
